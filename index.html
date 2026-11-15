@@ -105,8 +105,13 @@ input:focus,select:focus,textarea:focus{border-color:var(--orange);box-shadow:0 
 <label>Espécie</label>
 <select id="kind"><option>Cachorro</option><option>Gato</option></select>
 <div id="sizeField">
-<label for="size">Porte do cachorro</label>
-<select id="size"><option value="">Selecione o porte (opcional)</option><option>Pequeno</option><option>Médio</option><option>Grande</option></select>
+<label>Porte do cachorro</label>
+<div class="condition-options size-options" id="sizeOptions">
+<label><input type="checkbox" name="sizeChoice" value="Pequeno"> Pequeno</label>
+<label><input type="checkbox" name="sizeChoice" value="Médio"> Médio</label>
+<label><input type="checkbox" name="sizeChoice" value="Grande"> Grande</label>
+</div>
+<p class="counter" style="text-align:left;margin-top:-9px">Em adoção conjunta, você pode selecionar mais de um porte.</p>
 </div>
 <label>Gênero</label>
 <select id="gender"><option>Fêmea</option><option>Macho</option><option>Adoção conjunta</option></select>
@@ -226,8 +231,14 @@ function render(){
   document.getElementById("details").textContent = current.gender + " · " + current.kind;
   document.getElementById("description").textContent = current.description;
   const tags = [];
-  if(current.kind === "Cachorro" && current.size) tags.push("Porte: " + current.size);
-  (current.conditions || []).forEach(condition => { if(condition && condition !== "Não") tags.push(condition); });
+  if(current.kind === "Cachorro" && current.size) {
+    const sizes = String(current.size).split(",").map(value => value.trim()).filter(Boolean);
+    if(sizes.length) tags.push("Porte: " + sizes.join(" e "));
+  }
+  (current.conditions || []).forEach(condition => {
+    if(!condition || condition === "Não") return;
+    tags.push(condition.startsWith("Outro: ") ? condition.slice(7) : condition);
+  });
   const tagBox = document.getElementById("petTags");
   tagBox.innerHTML = "";
   tags.forEach(label => { const tag = document.createElement("span"); tag.className = "pet-tag"; tag.textContent = label; tagBox.appendChild(tag); });
@@ -310,39 +321,45 @@ function toggleAgeField(){
 document.getElementById("gender").addEventListener("change", toggleAgeField);
 toggleAgeField();
 
+function updateSizeChoices(changed){
+  const choices = [...document.querySelectorAll('input[name="sizeChoice"]')];
+  const joint = document.getElementById("gender").value === "Adoção conjunta";
+  if(!joint && changed && changed.checked){
+    choices.forEach(choice => { if(choice !== changed) choice.checked = false; });
+  }
+}
+
+document.querySelectorAll('input[name="sizeChoice"]').forEach(choice => {
+  choice.addEventListener("change", () => updateSizeChoices(choice));
+});
+
 function toggleSizeField(){
   const isDog = document.getElementById("kind").value === "Cachorro";
+  const joint = document.getElementById("gender").value === "Adoção conjunta";
   document.getElementById("sizeField").style.display = isDog ? "block" : "none";
-  if(!isDog) document.getElementById("size").value = "";
+  if(!isDog){
+    document.querySelectorAll('input[name="sizeChoice"]').forEach(choice => choice.checked = false);
+  }else if(!joint){
+    const checked = [...document.querySelectorAll('input[name="sizeChoice"]:checked')];
+    checked.slice(1).forEach(choice => choice.checked = false);
+  }
 }
 document.getElementById("kind").addEventListener("change", toggleSizeField);
+document.getElementById("gender").addEventListener("change", toggleSizeField);
 toggleSizeField();
 
-function toggleConditionFields(changed){
+function toggleConditionFields(){
   const checks = [...document.querySelectorAll('input[name="condition"]')];
   const noCheck = document.getElementById("noConditionCheck");
   const otherCheck = document.getElementById("otherConditionCheck");
-  const otherField = document.getElementById("otherConditionField");
-  const otherText = document.getElementById("otherCondition");
-
-  // "Não" é exclusivo: ao marcá-lo, desmarca todas as outras condições.
-  if(noCheck && changed === noCheck && noCheck.checked){
+  if(noCheck.checked){
     checks.forEach(check => { if(check !== noCheck) check.checked = false; });
-  // Ao marcar qualquer outra condição, desmarca "Não".
-  }else if(noCheck && changed && changed !== noCheck && changed.checked){
-    noCheck.checked = false;
   }
-
-  const showOther = !!(otherCheck && otherCheck.checked && noCheck && !noCheck.checked);
-  if(otherField) otherField.style.display = showOther ? "block" : "none";
-  if(otherText){
-    otherText.required = showOther;
-    if(!showOther) otherText.value = "";
-  }
+  document.getElementById("otherConditionField").style.display = otherCheck.checked && !noCheck.checked ? "block" : "none";
+  document.getElementById("otherCondition").required = otherCheck.checked && !noCheck.checked;
+  if(!otherCheck.checked) document.getElementById("otherCondition").value = "";
 }
-document.querySelectorAll('input[name="condition"]').forEach(check => {
-  check.addEventListener("change", () => toggleConditionFields(check));
-});
+document.querySelectorAll('input[name="condition"]').forEach(check => check.addEventListener("change", toggleConditionFields));
 toggleConditionFields();
 
 document.getElementById("photos").addEventListener("change", function(){
@@ -399,14 +416,14 @@ document.getElementById("petform").addEventListener("submit", async function(e){
       especie:document.getElementById("kind").value,
       sexo:document.getElementById("gender").value,
       idade:document.getElementById("age").value.trim(),
-      porte:document.getElementById("kind").value === "Cachorro" ? (document.getElementById("size").value || null) : null,
+      porte:document.getElementById("kind").value === "Cachorro" ? ([...document.querySelectorAll('input[name="sizeChoice"]:checked')].map(choice => choice.value).join(", ") || null) : null,
       condicoes:(() => {
         const selected = [...document.querySelectorAll('input[name="condition"]:checked')].map(check => check.value);
         if(selected.includes("Não")) return [];
         const values = selected.filter(value => value !== "Outro");
         if(selected.includes("Outro")){
           const other = document.getElementById("otherCondition").value.trim();
-          if(other) values.push("Outro: " + other);
+          if(other) values.push(other);
         }
         return values;
       })(),
