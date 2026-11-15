@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -17,6 +16,7 @@ header p{margin:5px}
 .hero h2{font-size:30px;color:#8e3908}
 .hero img{width:100%;max-width:650px;height:280px;object-fit:cover;border-radius:22px}
 button{border:0;border-radius:12px;padding:13px 20px;background:#ed710b;color:white;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.6;cursor:wait}
 section{padding:25px 16px;max-width:850px;margin:auto}
 .steps{background:white;border-radius:20px;margin:18px auto}
 .steps p{line-height:1.5}
@@ -37,6 +37,7 @@ label{font-size:13px;font-weight:bold}
 .admin{display:none}
 .petrow{padding:12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:13px}
 .petrow button{padding:8px}
+#loginStatus{font-size:13px;color:#8e3908}
 footer{text-align:center;padding:25px;color:#a45b2a}
 </style>
 </head>
@@ -71,8 +72,8 @@ footer{text-align:center;padding:25px;color:#a45b2a}
 <button id="dogtab" class="active" onclick="changeKind('Cachorro')">🐶 Cachorros</button>
 <button id="cattab" onclick="changeKind('Gato')">🐱 Gatos</button>
 </div>
-<p class="counter" id="counter"></p>
-<div class="card" id="card">
+<p class="counter" id="counter">Carregando animais...</p>
+<div class="card" id="card" style="display:none">
 <img id="photo" alt="Animal disponível para adoção">
 <div class="info">
 <h3 id="name"></h3>
@@ -80,15 +81,17 @@ footer{text-align:center;padding:25px;color:#a45b2a}
 <p id="description"></p>
 </div>
 </div>
-<div class="actions">
+<div class="actions" style="display:none">
 <button class="no" onclick="passPet()">✕</button>
 <button onclick="likePet()">♥</button>
 </div>
-<p class="counter" id="feedback">Deslize para conhecer os animais!</p>
+<p class="counter" id="feedback">Conheça os animais disponíveis para adoção!</p>
 </section>
 
 <section class="admin" id="admin">
 <h2>🔒 Área da ONG</h2>
+<p id="loginStatus">Administrador conectado.</p>
+<button type="button" onclick="logout()">Sair da área administrativa</button>
 <form id="petform">
 <label>Nome do animal</label>
 <input id="petname" required placeholder="Ex.: Mel">
@@ -105,14 +108,14 @@ footer{text-align:center;padding:25px;color:#a45b2a}
 <label>Fotos do animal (até 10)</label>
 <input id="photos" type="file" accept="image/*" multiple required>
 <p id="photoCount">Selecione até 10 imagens.</p>
-<button type="submit">Cadastrar animal</button>
+<button id="submitPet" type="submit">Cadastrar animal</button>
 </form>
 <h3>Animais cadastrados</h3>
 <div id="petlist"></div>
 </section>
 
 <section style="text-align:center">
-<button onclick="login()">🔒 Acesso dos responsáveis pela ONG</button>
+<button id="accessButton" onclick="login()">🔒 Acesso dos responsáveis pela ONG</button>
 </section>
 
 <footer>
@@ -120,156 +123,266 @@ Adotar Marau 🧡<br>
 PetMatch — Seu próximo match tem quatro patas!
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const initialPets=[
-{id:1,name:"Bob",kind:"Cachorro",gender:"Macho",age:"2 anos",description:"Carinhoso, brincalhão e pronto para encontrar uma família!",phone:"",photos:["https://images.unsplash.com/photo-1552053831-71594a27632d?w=900"]},
-{id:2,name:"Mel",kind:"Cachorro",gender:"Fêmea",age:"1 ano",description:"Uma companheira doce e cheia de energia!",phone:"",photos:["https://images.unsplash.com/photo-1517849845537-4d257902454a?w=900"]},
-{id:3,name:"Luna",kind:"Gato",gender:"Fêmea",age:"8 meses",description:"Curiosa, delicada e cheia de carinho!",phone:"",photos:["https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=900"]}
-];
+// COLE AQUI os dados Project URL e Publishable key do seu projeto Supabase.
+const SUPABASE_URL = "https://jisjoersbwxlxxyxdpcu.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_nqBghrRFQUX-q1xCA5MWmQ_F11GZ4m7";
 
-let pets=JSON.parse(localStorage.getItem("petmatchPets")||"null")||initialPets;
-let kind="Cachorro",index=0;
-let current=null;
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const TABLE = "Animais";
+const BUCKET = "fotos-animais";
 
-function save(){
-localStorage.setItem("petmatchPets",JSON.stringify(pets));
+let pets = [];
+let kind = "Cachorro";
+let index = 0;
+let current = null;
+
+function isConfigured(){
+  return SUPABASE_URL.startsWith("https://") &&
+    !SUPABASE_URL.includes("COLE_AQUI") &&
+    SUPABASE_ANON_KEY.length > 20 &&
+    !SUPABASE_ANON_KEY.includes("COLE_AQUI");
+}
+
+function mapPet(row){
+  return {
+    id: row.id,
+    name: row.nome,
+    kind: row.especie,
+    gender: row.sexo,
+    age: row.idade,
+    description: row.descricao,
+    phone: row.whatsapp || "",
+    photos: Array.isArray(row.fotos) ? row.fotos : [],
+    adopted: !row.ativo
+  };
+}
+
+async function loadPets(){
+  if(!isConfigured()){
+    document.getElementById("counter").textContent = "Falta configurar a Project URL e a Publishable key no código.";
+    return;
+  }
+  document.getElementById("counter").textContent = "Carregando animais...";
+  const {data, error} = await db.from(TABLE).select("*").order("created_at", {ascending:false});
+  if(error){
+    console.error(error);
+    document.getElementById("counter").textContent = "Não foi possível carregar os animais. Confira a conexão e as permissões.";
+    return;
+  }
+  pets = (data || []).map(mapPet);
+  index = 0;
+  render();
+  if(document.getElementById("admin").style.display === "block") renderList();
 }
 
 function filtered(){
-return pets.filter(p=>p.kind===kind&&!p.adopted);
+  return pets.filter(p => p.kind === kind && !p.adopted);
 }
 
 function render(){
-let list=filtered();
-current=list[index]||null;
-document.getElementById("card").style.display=current?"block":"none";
-document.querySelector(".actions").style.display=current?"flex":"none";
-document.getElementById("counter").textContent=current?(index+1)+" / "+list.length:"Todos os animais foram vistos!";
-if(!current)return;
-document.getElementById("photo").src=current.photos[0];
-document.getElementById("name").textContent=current.name+", "+current.age;
-document.getElementById("details").textContent=current.gender+" · "+current.kind;
-document.getElementById("description").textContent=current.description;
+  const list = filtered();
+  if(index >= list.length) index = 0;
+  current = list[index] || null;
+  document.getElementById("card").style.display = current ? "block" : "none";
+  document.querySelector(".actions").style.display = current ? "flex" : "none";
+  document.getElementById("counter").textContent = current
+    ? (index + 1) + " / " + list.length
+    : "Ainda não há animais disponíveis nesta categoria.";
+  if(!current) return;
+  document.getElementById("photo").src = current.photos[0] || "";
+  document.getElementById("name").textContent = current.name + ", " + current.age;
+  document.getElementById("details").textContent = current.gender + " · " + current.kind;
+  document.getElementById("description").textContent = current.description;
 }
 
 function changeKind(k){
-kind=k;
-index=0;
-document.getElementById("dogtab").classList.toggle("active",k==="Cachorro");
-document.getElementById("cattab").classList.toggle("active",k==="Gato");
-render();
+  kind = k;
+  index = 0;
+  document.getElementById("dogtab").classList.toggle("active", k === "Cachorro");
+  document.getElementById("cattab").classList.toggle("active", k === "Gato");
+  render();
 }
 
 function next(){
-const card=document.getElementById("card");
-card.style.transition="transform .4s, opacity .4s";
-card.style.transform="translateX(-120%) rotate(-15deg)";
-card.style.opacity="0";
-setTimeout(()=>{
-index++;
-card.style.transition="none";
-card.style.transform="translateX(0)";
-card.style.opacity="1";
-render();
-},400);
+  const card = document.getElementById("card");
+  card.style.transition = "transform .4s, opacity .4s";
+  card.style.transform = "translateX(-120%) rotate(-15deg)";
+  card.style.opacity = "0";
+  setTimeout(() => {
+    index++;
+    card.style.transition = "none";
+    card.style.transform = "translateX(0)";
+    card.style.opacity = "1";
+    render();
+  }, 400);
 }
 
 function passPet(){
-if(!current)return;
-document.getElementById("feedback").textContent="Vamos conhecer o próximo pet!";
-next();
+  if(!current) return;
+  document.getElementById("feedback").textContent = "Vamos conhecer o próximo pet!";
+  next();
 }
 
 function likePet(){
-if(!current)return;
-let message=`Olá! Conheci o ${current.name} pelo PetMatch da Adotar Marau e tenho interesse em saber mais sobre a adoção. Poderiam me passar mais informações?`;
-if(!current.phone){
-alert("O WhatsApp deste animal ainda não foi cadastrado pela ONG.");
-return;
-}
-let phone=current.phone.replace(/\D/g,"");
-window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(message),"_blank");
-}
-
-function login(){
-let password=prompt("Digite a senha dos responsáveis pela ONG:");
-if(password==="petmatchdemo"){
-document.getElementById("admin").style.display="block";
-document.getElementById("admin").scrollIntoView({behavior:"smooth"});
-renderList();
-}else if(password!==null){
-alert("Senha incorreta!");
-}
+  if(!current) return;
+  const message = `Olá! Conheci o ${current.name} pelo PetMatch da Adotar Marau e tenho interesse em saber mais sobre a adoção. Poderiam me passar mais informações?`;
+  if(!current.phone){
+    alert("O WhatsApp deste animal ainda não foi cadastrado pela ONG.");
+    return;
+  }
+  const phone = current.phone.replace(/\D/g, "");
+  window.open("https://wa.me/" + phone + "?text=" + encodeURIComponent(message), "_blank");
 }
 
-document.getElementById("photos").addEventListener("change",function(){
-if(this.files.length>10){
-alert("Você pode adicionar até 10 fotos!");
-this.value="";
+async function login(){
+  if(!isConfigured()){
+    alert("Antes do login, configure a Project URL e a Publishable key no início do código.");
+    return;
+  }
+  const email = prompt("Digite o e-mail do administrador da ONG:");
+  if(email === null) return;
+  const password = prompt("Digite a senha do administrador:");
+  if(password === null) return;
+  const {error} = await db.auth.signInWithPassword({email:email.trim(), password});
+  if(error){
+    alert("Não foi possível entrar. Confira o e-mail e a senha.");
+    console.error(error);
+    return;
+  }
+  document.getElementById("admin").style.display = "block";
+  document.getElementById("admin").scrollIntoView({behavior:"smooth"});
+  renderList();
 }
-document.getElementById("photoCount").textContent=this.files.length+" foto(s) selecionada(s).";
+
+async function logout(){
+  await db.auth.signOut();
+  document.getElementById("admin").style.display = "none";
+  alert("Você saiu da área administrativa.");
+}
+
+document.getElementById("photos").addEventListener("change", function(){
+  if(this.files.length > 10){
+    alert("Você pode adicionar até 10 fotos!");
+    this.value = "";
+  }
+  document.getElementById("photoCount").textContent = this.files.length + " foto(s) selecionada(s).";
 });
 
-document.getElementById("petform").addEventListener("submit",async function(e){
-e.preventDefault();
-let files=[...document.getElementById("photos").files];
-if(!files.length||files.length>10){
-alert("Selecione de 1 a 10 fotos.");
-return;
+async function uploadPhotos(files){
+  const urls = [];
+  for(let i = 0; i < files.length; i++){
+    const file = files[i];
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = Date.now() + "-" + i + "-" + safeName;
+    const {error:uploadError} = await db.storage.from(BUCKET).upload(path, file, {
+      cacheControl:"3600",
+      upsert:false,
+      contentType:file.type
+    });
+    if(uploadError) throw uploadError;
+    const {data} = db.storage.from(BUCKET).getPublicUrl(path);
+    urls.push(data.publicUrl);
+  }
+  return urls;
 }
-if(files.some(f=>!f.type.startsWith("image/"))){
-alert("Selecione apenas imagens.");
-return;
-}
-let images=await Promise.all(files.map(f=>new Promise(resolve=>{
-let reader=new FileReader();
-reader.onload=()=>resolve(reader.result);
-reader.readAsDataURL(f);
-})));
-let pet={
-id:Date.now(),
-name:document.getElementById("petname").value,
-kind:document.getElementById("kind").value,
-gender:document.getElementById("gender").value,
-age:document.getElementById("age").value,
-description:document.getElementById("descriptionInput").value,
-phone:document.getElementById("phone").value.replace(/\D/g,""),
-photos:images
-};
-pets.push(pet);
-try{
-save();
-alert("Animal cadastrado com sucesso!");
-this.reset();
-document.getElementById("photoCount").textContent="Selecione até 10 imagens.";
-renderList();
-render();
-}catch(err){
-pets=pets.filter(p=>p.id!==pet.id);
-alert("Não foi possível salvar. As fotos podem ser grandes demais. Tente imagens menores.");
-}
+
+document.getElementById("petform").addEventListener("submit", async function(e){
+  e.preventDefault();
+  const {data:{session}} = await db.auth.getSession();
+  if(!session){
+    alert("Sua sessão expirou. Entre novamente na área da ONG.");
+    document.getElementById("admin").style.display = "none";
+    return;
+  }
+  const files = [...document.getElementById("photos").files];
+  if(!files.length || files.length > 10){
+    alert("Selecione de 1 a 10 fotos.");
+    return;
+  }
+  if(files.some(f => !f.type.startsWith("image/"))){
+    alert("Selecione apenas imagens.");
+    return;
+  }
+
+  const submitButton = document.getElementById("submitPet");
+  submitButton.disabled = true;
+  submitButton.textContent = "Enviando...";
+  try{
+    const imageUrls = await uploadPhotos(files);
+    const pet = {
+      nome:document.getElementById("petname").value.trim(),
+      especie:document.getElementById("kind").value,
+      sexo:document.getElementById("gender").value,
+      idade:document.getElementById("age").value.trim(),
+      descricao:document.getElementById("descriptionInput").value.trim(),
+      whatsapp:document.getElementById("phone").value.replace(/\D/g, ""),
+      fotos:imageUrls,
+      ativo:true
+    };
+    const {error} = await db.from(TABLE).insert(pet);
+    if(error) throw error;
+    alert("Animal cadastrado com sucesso!");
+    this.reset();
+    document.getElementById("photoCount").textContent = "Selecione até 10 imagens.";
+    await loadPets();
+    renderList();
+  }catch(err){
+    console.error(err);
+    alert("Não foi possível cadastrar. Confira sua conexão, as permissões do Supabase e tente novamente. Se as fotos já tiverem sido enviadas, elas podem permanecer no Storage.");
+  }finally{
+    submitButton.disabled = false;
+    submitButton.textContent = "Cadastrar animal";
+  }
 });
+
+async function setAdopted(pet, adopted){
+  const {data:{session}} = await db.auth.getSession();
+  if(!session){
+    alert("Entre novamente na área da ONG.");
+    return;
+  }
+  const {error} = await db.from(TABLE).update({ativo:!adopted}).eq("id", pet.id);
+  if(error){
+    console.error(error);
+    alert("Não foi possível atualizar o animal. Confira as permissões.");
+    return;
+  }
+  await loadPets();
+  renderList();
+}
 
 function renderList(){
-let list=document.getElementById("petlist");
-list.innerHTML="";
-pets.forEach(p=>{
-let row=document.createElement("div");
-row.className="petrow";
-let name=document.createElement("span");
-name.textContent=p.name+" · "+p.kind;
-let button=document.createElement("button");
-button.textContent=p.adopted?"Reativar":"Marcar adotado";
-button.onclick=()=>{
-p.adopted=!p.adopted;
-save();renderList();render();
-};
-row.append(name,button);
-list.append(row);
-});
+  const list = document.getElementById("petlist");
+  list.innerHTML = "";
+  pets.forEach(p => {
+    const row = document.createElement("div");
+    row.className = "petrow";
+    const name = document.createElement("span");
+    name.textContent = p.name + " · " + p.kind + (p.adopted ? " · Adotado" : " · Disponível");
+    const button = document.createElement("button");
+    button.textContent = p.adopted ? "Reativar" : "Marcar adotado";
+    button.onclick = () => setAdopted(p, !p.adopted);
+    row.append(name, button);
+    list.append(row);
+  });
 }
 
-render();
+async function init(){
+  if(!isConfigured()){
+    document.getElementById("counter").textContent = "O site está aguardando a configuração do Supabase.";
+    return;
+  }
+  await loadPets();
+  const {data:{session}} = await db.auth.getSession();
+  if(session){
+    document.getElementById("admin").style.display = "block";
+    renderList();
+  }
+}
+
+init();
 </script>
 </body>
 </html>
