@@ -348,19 +348,28 @@ document.getElementById("kind").addEventListener("change", toggleSizeField);
 document.getElementById("gender").addEventListener("change", toggleSizeField);
 toggleSizeField();
 
-function toggleConditionFields(){
+function syncConditionChoices(changed){
   const checks = [...document.querySelectorAll('input[name="condition"]')];
   const noCheck = document.getElementById("noConditionCheck");
   const otherCheck = document.getElementById("otherConditionCheck");
-  if(noCheck.checked){
+  const otherField = document.getElementById("otherConditionField");
+  const otherInput = document.getElementById("otherCondition");
+
+  if(noCheck && changed === noCheck && noCheck.checked){
     checks.forEach(check => { if(check !== noCheck) check.checked = false; });
+  }else if(noCheck && changed && changed !== noCheck && changed.checked){
+    noCheck.checked = false;
   }
-  document.getElementById("otherConditionField").style.display = otherCheck.checked && !noCheck.checked ? "block" : "none";
-  document.getElementById("otherCondition").required = otherCheck.checked && !noCheck.checked;
-  if(!otherCheck.checked) document.getElementById("otherCondition").value = "";
+
+  const showOther = !!(otherCheck && otherCheck.checked && (!noCheck || !noCheck.checked));
+  if(otherField) otherField.style.display = showOther ? "block" : "none";
+  if(otherInput){
+    otherInput.required = showOther;
+    if(!showOther) otherInput.value = "";
+  }
 }
-document.querySelectorAll('input[name="condition"]').forEach(check => check.addEventListener("change", toggleConditionFields));
-toggleConditionFields();
+document.querySelectorAll('input[name="condition"]').forEach(check => check.addEventListener("change", () => syncConditionChoices(check)));
+syncConditionChoices();
 
 document.getElementById("photos").addEventListener("change", function(){
   if(this.files.length > 10){
@@ -438,7 +447,7 @@ document.getElementById("petform").addEventListener("submit", async function(e){
     this.reset();
     toggleAgeField();
     toggleSizeField();
-    toggleConditionFields();
+    syncConditionChoices();
     document.getElementById("photoCount").textContent = "Selecione até 10 imagens.";
     await loadPets();
     renderList();
