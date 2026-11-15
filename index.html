@@ -36,10 +36,10 @@ section{padding:30px 18px;max-width:920px;margin:24px auto}
 .info{padding:21px 24px 24px}.info h3{font-size:27px;margin:0 0 8px;color:#50362d}.info p{line-height:1.55;color:#75645c}.joint-tag{display:inline-flex;align-items:center;gap:6px;margin:0 0 9px;padding:7px 13px;border-radius:999px;background:#fff0e7;color:#b44d1c;font-size:12px;font-weight:800;letter-spacing:.35px}
 .actions{display:flex;justify-content:center;gap:22px;padding:20px}.actions button{width:66px;height:66px;border-radius:50%;font-size:28px;padding:0}.actions .no{background:#fff;color:#e66f35;border:1px solid #f3d8c9;box-shadow:0 8px 20px rgba(111,62,35,.08)}
 .counter{text-align:center;font-size:13px;color:#8a766b}
+.condition-options{display:flex;flex-wrap:wrap;gap:9px;margin:7px 0 16px}.condition-options label{display:inline-flex;align-items:center;gap:7px;padding:9px 12px;border:1px solid #ecd9cf;border-radius:999px;background:#fff;font-size:13px;font-weight:700}.condition-options input{width:auto;margin:0;accent-color:var(--orange)}.pet-tags{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}.pet-tag{display:inline-block;padding:6px 10px;border-radius:999px;background:#fff0e7;color:#9b5736;font-size:12px;font-weight:800}
 form{background:linear-gradient(145deg,#fff 0%,#fff8f4 100%);padding:24px;border-radius:30px 30px 50px 30px;box-shadow:var(--shadow)}
 input,select,textarea{width:100%;padding:13px 15px;margin:7px 0 16px;border:1px solid #ecd9cf;border-radius:15px;background:#fff;color:var(--ink);font-size:15px;outline:none}
 input:focus,select:focus,textarea:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(244,123,53,.12)}label{font-size:13px;font-weight:800;color:#654b3f}
-.field-help{font-size:12px;color:var(--muted);margin:-8px 0 14px}.choice-group{border:1px solid var(--line);border-radius:16px;padding:13px 15px;margin:7px 0 17px;background:#fff}.choice-group legend{font-size:13px;font-weight:800;color:#654b3f;padding:0 5px}.choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.choice{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--ink)}.choice input{width:auto;margin:0;accent-color:var(--orange)}.profile-tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.profile-tag{display:inline-block;padding:6px 10px;border-radius:999px;background:var(--orange-soft);color:#9b4b22;font-size:12px;font-weight:800}
 .admin{display:none}.petrow{padding:14px 4px;border-bottom:1px solid #f3e7e0;display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:13px}.petrow button{padding:9px 14px;font-size:12px}.petrow .delete-btn{background:#fff0ed;color:#a33b2d;border:1px solid #f2c8bf}
 #loginStatus{font-size:13px;color:#8e4c2c}footer{text-align:center;padding:34px 18px 42px;color:#96786a;font-size:14px}
 @media(max-width:560px){header{gap:12px;padding:12px 16px}.brand-logo{width:68px;height:68px}header p{font-size:12px}.hero{padding:38px 16px 40px;border-radius:0 0 44px 44px}.hero img{border-radius:25px 25px 58px 25px}.card img{height:330px}.steps{border-radius:28px 28px 48px 28px}}
@@ -84,8 +84,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--orange);box-shadow:0 
 <span class="joint-tag" id="jointBadge" style="display:none">♥ ADOÇÃO CONJUNTA</span>
 <h3 id="name"></h3>
 <p id="details"></p>
+<div id="petTags" class="pet-tags"></div>
 <p id="description"></p>
-<div class="profile-tags" id="profileTags" style="display:none"></div>
 </div>
 </div>
 <div class="actions" style="display:none">
@@ -106,23 +106,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--orange);box-shadow:0 
 <select id="kind"><option>Cachorro</option><option>Gato</option></select>
 <div id="sizeField">
 <label for="size">Porte do cachorro</label>
-<select id="size"><option value="">Selecione o porte</option><option>Pequeno</option><option>Médio</option><option>Grande</option></select>
+<select id="size"><option value="">Selecione o porte (opcional)</option><option>Pequeno</option><option>Médio</option><option>Grande</option></select>
 </div>
-<fieldset class="choice-group">
-<legend>O animal possui alguma condição?</legend>
-<div class="choice-grid">
-<label class="choice"><input type="checkbox" name="condition" value="FIV"> FIV</label>
-<label class="choice"><input type="checkbox" name="condition" value="FELV"> FELV</label>
-<label class="choice"><input type="checkbox" name="condition" value="PIF"> PIF</label>
-<label class="choice"><input type="checkbox" name="condition" value="Esporotricose"> Esporotricose</label>
-<label class="choice"><input type="checkbox" name="condition" value="Outro" id="otherCondition"> Outro</label>
-<label class="choice"><input type="checkbox" name="condition" value="Não" id="noCondition"> Não</label>
-</div>
-<div id="otherConditionField" style="display:none;margin-top:12px">
-<label for="otherConditionText">Qual é a outra condição?</label>
-<input id="otherConditionText" placeholder="Escreva a condição">
-</div>
-</fieldset>
 <label>Gênero</label>
 <select id="gender"><option>Fêmea</option><option>Macho</option><option>Adoção conjunta</option></select>
 <p class="counter" style="text-align:left;margin-top:-9px">Em adoção conjunta, informe os nomes e detalhes de cada animal na descrição.</p>
@@ -130,14 +115,23 @@ input:focus,select:focus,textarea:focus{border-color:var(--orange);box-shadow:0 
 <label for="age">Idade</label>
 <input id="age" placeholder="Ex.: 1 ano">
 </div>
+<label>Condições de saúde</label>
+<div class="condition-options" id="conditionOptions">
+<label><input type="checkbox" name="condition" value="FIV"> FIV</label>
+<label><input type="checkbox" name="condition" value="FELV"> FELV</label>
+<label><input type="checkbox" name="condition" value="PIF"> PIF</label>
+<label><input type="checkbox" name="condition" value="Esporotricose"> Esporotricose</label>
+<label><input type="checkbox" name="condition" value="Outro" id="otherConditionCheck"> Outro</label>
+<label><input type="checkbox" name="condition" value="Não" id="noConditionCheck"> Não</label>
+</div>
+<div id="otherConditionField" style="display:none">
+<label for="otherCondition">Qual condição?</label>
+<input id="otherCondition" placeholder="Descreva a condição">
+</div>
 <label>Descrição</label>
 <textarea id="descriptionInput" required placeholder="Conte um pouco sobre o animal"></textarea>
 <label>WhatsApp do responsável por este animal</label>
-<select id="phone" required>
-<option value="">Selecione o WhatsApp</option>
-<option value="5554996313354">(54) 99631-3354</option>
-<option value="5554996844168">(54) 99684-4168</option>
-</select>
+<select id="phone" required><option value="">Selecione o WhatsApp</option><option value="5554996313354">(54) 99631-3354</option><option value="5554996844168">(54) 99684-4168</option></select>
 <label>Fotos do animal (até 10)</label>
 <input id="photos" type="file" accept="image/*" multiple required>
 <p id="photoCount">Selecione até 10 imagens.</p>
@@ -185,9 +179,9 @@ function mapPet(row){
     name: row.nome,
     kind: row.especie,
     gender: row.sexo,
+    age: row.idade,
     size: row.porte || "",
     conditions: Array.isArray(row.condicoes) ? row.condicoes : [],
-    age: row.idade,
     description: row.descricao,
     phone: row.whatsapp || "",
     photos: Array.isArray(row.fotos) ? row.fotos : [],
@@ -231,18 +225,12 @@ function render(){
   document.getElementById("name").textContent = current.name + (current.age ? ", " + current.age : "");
   document.getElementById("details").textContent = current.gender + " · " + current.kind;
   document.getElementById("description").textContent = current.description;
-  const tags = document.getElementById("profileTags");
-  tags.innerHTML = "";
-  const profileInfo = [];
-  if(current.kind === "Cachorro" && current.size) profileInfo.push("Porte: " + current.size);
-  if(current.conditions.length) profileInfo.push("Condição: " + current.conditions.join(", "));
-  profileInfo.forEach(info => {
-    const tag = document.createElement("span");
-    tag.className = "profile-tag";
-    tag.textContent = info;
-    tags.appendChild(tag);
-  });
-  tags.style.display = profileInfo.length ? "flex" : "none";
+  const tags = [];
+  if(current.kind === "Cachorro" && current.size) tags.push("Porte: " + current.size);
+  (current.conditions || []).forEach(condition => { if(condition && condition !== "Não") tags.push(condition); });
+  const tagBox = document.getElementById("petTags");
+  tagBox.innerHTML = "";
+  tags.forEach(label => { const tag = document.createElement("span"); tag.className = "pet-tag"; tag.textContent = label; tagBox.appendChild(tag); });
   const joint = current.gender === "Adoção conjunta";
   document.getElementById("jointBadge").style.display = joint ? "inline-flex" : "none";
 }
@@ -325,28 +313,37 @@ toggleAgeField();
 function toggleSizeField(){
   const isDog = document.getElementById("kind").value === "Cachorro";
   document.getElementById("sizeField").style.display = isDog ? "block" : "none";
-  document.getElementById("size").required = isDog;
   if(!isDog) document.getElementById("size").value = "";
 }
 document.getElementById("kind").addEventListener("change", toggleSizeField);
 toggleSizeField();
 
-function syncConditionChoices(changed){
+function toggleConditionFields(changed){
   const checks = [...document.querySelectorAll('input[name="condition"]')];
-  const no = document.getElementById("noCondition");
-  if(changed === no && no.checked){
-    checks.forEach(input => { if(input !== no) input.checked = false; });
-  }else if(changed !== no && changed.checked){
-    no.checked = false;
+  const noCheck = document.getElementById("noConditionCheck");
+  const otherCheck = document.getElementById("otherConditionCheck");
+  const otherField = document.getElementById("otherConditionField");
+  const otherText = document.getElementById("otherCondition");
+
+  // "Não" é exclusivo: ao marcá-lo, desmarca todas as outras condições.
+  if(noCheck && changed === noCheck && noCheck.checked){
+    checks.forEach(check => { if(check !== noCheck) check.checked = false; });
+  // Ao marcar qualquer outra condição, desmarca "Não".
+  }else if(noCheck && changed && changed !== noCheck && changed.checked){
+    noCheck.checked = false;
   }
-  const other = document.getElementById("otherCondition").checked && !no.checked;
-  document.getElementById("otherConditionField").style.display = other ? "block" : "none";
-  document.getElementById("otherConditionText").required = other;
-  if(!other) document.getElementById("otherConditionText").value = "";
+
+  const showOther = !!(otherCheck && otherCheck.checked && noCheck && !noCheck.checked);
+  if(otherField) otherField.style.display = showOther ? "block" : "none";
+  if(otherText){
+    otherText.required = showOther;
+    if(!showOther) otherText.value = "";
+  }
 }
-document.querySelectorAll('input[name="condition"]').forEach(input => {
-  input.addEventListener("change", () => syncConditionChoices(input));
+document.querySelectorAll('input[name="condition"]').forEach(check => {
+  check.addEventListener("change", () => toggleConditionFields(check));
 });
+toggleConditionFields();
 
 document.getElementById("photos").addEventListener("change", function(){
   if(this.files.length > 10){
@@ -382,11 +379,6 @@ document.getElementById("petform").addEventListener("submit", async function(e){
     document.getElementById("admin").style.display = "none";
     return;
   }
-  if(document.getElementById("otherCondition").checked && !document.getElementById("otherConditionText").value.trim()){
-    alert("Informe qual é a outra condição.");
-    document.getElementById("otherConditionText").focus();
-    return;
-  }
   const files = [...document.getElementById("photos").files];
   if(!files.length || files.length > 10){
     alert("Selecione de 1 a 10 fotos.");
@@ -406,9 +398,18 @@ document.getElementById("petform").addEventListener("submit", async function(e){
       nome:document.getElementById("petname").value.trim(),
       especie:document.getElementById("kind").value,
       sexo:document.getElementById("gender").value,
-      porte:document.getElementById("kind").value === "Cachorro" ? document.getElementById("size").value : null,
-      condicoes:document.getElementById("noCondition").checked ? [] : [...document.querySelectorAll('input[name="condition"]:checked')].filter(input => input.value !== "Não").map(input => input.value === "Outro" ? "Outro: " + document.getElementById("otherConditionText").value.trim() : input.value),
       idade:document.getElementById("age").value.trim(),
+      porte:document.getElementById("kind").value === "Cachorro" ? (document.getElementById("size").value || null) : null,
+      condicoes:(() => {
+        const selected = [...document.querySelectorAll('input[name="condition"]:checked')].map(check => check.value);
+        if(selected.includes("Não")) return [];
+        const values = selected.filter(value => value !== "Outro");
+        if(selected.includes("Outro")){
+          const other = document.getElementById("otherCondition").value.trim();
+          if(other) values.push("Outro: " + other);
+        }
+        return values;
+      })(),
       descricao:document.getElementById("descriptionInput").value.trim(),
       whatsapp:document.getElementById("phone").value.replace(/\D/g, ""),
       fotos:imageUrls,
@@ -420,7 +421,7 @@ document.getElementById("petform").addEventListener("submit", async function(e){
     this.reset();
     toggleAgeField();
     toggleSizeField();
-    syncConditionChoices(null);
+    toggleConditionFields();
     document.getElementById("photoCount").textContent = "Selecione até 10 imagens.";
     await loadPets();
     renderList();
